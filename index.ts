@@ -1,28 +1,60 @@
 import {
     namespaceName,
-    frontendService,
     frontendServiceName,
     redisLeaderServiceName,
     redisReplicaServiceName,
 } from "./guestbook";
 
-/**
- * Stack outputs.
- *
- * More outputs will be added when Prometheus and Grafana
- * are introduced.
- */
+import {
+    monitoringNamespaceName,
+    grafanaUrl,
+    grafanaNodePort,
+    grafanaAdminUser,
+    grafanaAdminPassword,
+    prometheusReleaseName,
+} from "./monitoring";
 
-export const guestbookNamespace = namespaceName;
+// -----------------------------------------------------------------------------
+// Guestbook outputs
+// -----------------------------------------------------------------------------
+
+export const guestbookNamespace =
+    namespaceName;
 
 export const guestbookFrontendService =
     frontendServiceName;
 
-export const redisLeaderService =
+export const guestbookRedisLeaderService =
     redisLeaderServiceName;
 
-export const redisReplicaService =
+export const guestbookRedisReplicaService =
     redisReplicaServiceName;
 
-export const guestbookServiceType =
-    frontendService.spec.type;
+// -----------------------------------------------------------------------------
+// Monitoring outputs
+// -----------------------------------------------------------------------------
+
+export const monitoringNamespace =
+    monitoringNamespaceName;
+
+export const prometheusHelmRelease =
+    prometheusReleaseName;
+
+export const grafanaAccessUrl =
+    grafanaUrl;
+
+export const grafanaPort =
+    grafanaNodePort;
+
+export const grafanaUsername =
+    grafanaAdminUser;
+
+/**
+ * Pulumi automatically treats this output as a secret.
+ *
+ * To intentionally display it:
+ *
+ *   pulumi stack output grafanaPassword --show-secrets
+ */
+export const grafanaPassword =
+    grafanaAdminPassword;
