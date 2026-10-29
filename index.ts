@@ -18,6 +18,10 @@ import {
     frontendLatencyQuery,
 } from "./monitoring";
 
+import {
+    guestbookDashboard,
+} from "./dashboard";
+
 // -----------------------------------------------------------------------------
 // Guestbook Outputs
 // -----------------------------------------------------------------------------
@@ -48,7 +52,7 @@ export const blackboxHelmRelease =
     blackboxReleaseName;
 
 // -----------------------------------------------------------------------------
-// Grafana Access
+// Grafana
 // -----------------------------------------------------------------------------
 
 export const grafanaAccessUrl =
@@ -60,15 +64,11 @@ export const grafanaPort =
 export const grafanaUsername =
     grafanaAdminUser;
 
-/**
- * This output remains encrypted by Pulumi.
- *
- * Retrieve intentionally with:
- *
- * pulumi stack output grafanaPassword --show-secrets
- */
 export const grafanaPassword =
     grafanaAdminPassword;
+
+export const grafanaDashboard =
+    guestbookDashboard.metadata.name;
 
 // -----------------------------------------------------------------------------
 // Prometheus Verification Queries
