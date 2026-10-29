@@ -177,7 +177,7 @@ export const monitoringStack =
                 },
 
                 nodeExporter: {
-                    enabled: true,
+                    enabled: false,
                 },
 
                 // -------------------------------------------------------------

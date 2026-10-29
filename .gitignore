@@ -12,3 +12,7 @@ Pulumi.*.yaml
 # IDE
 .vscode/
 .idea/
+# Local deployment files
+.pulumi-state/
+.kubeconfig.docker-desktop
+.env.pulumi
