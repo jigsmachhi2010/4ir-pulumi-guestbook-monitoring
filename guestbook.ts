@@ -1,18 +1,18 @@
 import * as k8s from "@pulumi/kubernetes";
 
 /**
- * Kubernetes Guestbook application.
+ * Kubernetes Guestbook Application
  *
  * Architecture:
  *
  * Frontend (3 replicas)
- *       |
- *       +----> Redis Leader
- *       |
- *       +----> Redis Replicas
+ *        |
+ *        +------ Redis Leader
+ *        |
+ *        +------ Redis Replicas
  *
- * The resource labels are intentionally consistent because the monitoring
- * layer will use them later for Prometheus/Grafana observability.
+ * Redis pods also contain a redis_exporter sidecar that exposes
+ * Prometheus metrics on port 9121.
  */
 
 // -----------------------------------------------------------------------------
@@ -47,50 +47,119 @@ export const redisLeaderDeployment = new k8s.apps.v1.Deployment(
         metadata: {
             name: "redis-leader",
             namespace: guestbookNamespace.metadata.name,
+            labels: redisLeaderLabels,
         },
+
         spec: {
             replicas: 1,
+
             selector: {
                 matchLabels: redisLeaderLabels,
             },
+
             template: {
                 metadata: {
                     labels: redisLeaderLabels,
                 },
+
                 spec: {
                     containers: [
+                        // -----------------------------------------------------
+                        // Redis
+                        // -----------------------------------------------------
                         {
                             name: "redis-leader",
                             image: "redis:7-alpine",
+
                             ports: [
                                 {
                                     name: "redis",
                                     containerPort: 6379,
                                 },
                             ],
+
                             resources: {
                                 requests: {
                                     cpu: "100m",
                                     memory: "100Mi",
                                 },
+
                                 limits: {
                                     cpu: "250m",
                                     memory: "256Mi",
                                 },
                             },
+
                             readinessProbe: {
                                 tcpSocket: {
                                     port: "redis",
                                 },
+
                                 initialDelaySeconds: 5,
                                 periodSeconds: 5,
                             },
+
                             livenessProbe: {
                                 tcpSocket: {
                                     port: "redis",
                                 },
+
                                 initialDelaySeconds: 10,
                                 periodSeconds: 10,
+                            },
+                        },
+
+                        // -----------------------------------------------------
+                        // Prometheus Redis Exporter
+                        // -----------------------------------------------------
+                        {
+                            name: "redis-exporter",
+                            image: "oliver006/redis_exporter:v1.93.0",
+
+                            env: [
+                                {
+                                    name: "REDIS_ADDR",
+                                    value: "redis://localhost:6379",
+                                },
+                            ],
+
+                            ports: [
+                                {
+                                    name: "metrics",
+                                    containerPort: 9121,
+                                },
+                            ],
+
+                            resources: {
+                                requests: {
+                                    cpu: "25m",
+                                    memory: "32Mi",
+                                },
+
+                                limits: {
+                                    cpu: "100m",
+                                    memory: "64Mi",
+                                },
+                            },
+
+                            readinessProbe: {
+                                httpGet: {
+                                    path: "/metrics",
+                                    port: "metrics",
+                                },
+
+                                initialDelaySeconds: 5,
+                                periodSeconds: 10,
+                            },
+
+                            livenessProbe: {
+                                httpGet: {
+                                    path: "/metrics",
+                                    port: "metrics",
+                                },
+
+                                initialDelaySeconds: 10,
+                                periodSeconds: 15,
                             },
                         },
                     ],
@@ -100,6 +169,13 @@ export const redisLeaderDeployment = new k8s.apps.v1.Deployment(
     },
 );
 
+// -----------------------------------------------------------------------------
+// Redis Leader Service
+//
+// Port 6379 -> Redis
+// Port 9121 -> Prometheus metrics
+// -----------------------------------------------------------------------------
+
 export const redisLeaderService = new k8s.core.v1.Service(
     "redis-leader-service",
     {
@@ -108,13 +184,21 @@ export const redisLeaderService = new k8s.core.v1.Service(
             namespace: guestbookNamespace.metadata.name,
             labels: redisLeaderLabels,
         },
+
         spec: {
             selector: redisLeaderLabels,
+
             ports: [
                 {
                     name: "redis",
                     port: 6379,
                     targetPort: "redis",
+                },
+
+                {
+                    name: "metrics",
+                    port: 9121,
+                    targetPort: "metrics",
                 },
             ],
         },
@@ -137,50 +221,119 @@ export const redisReplicaDeployment = new k8s.apps.v1.Deployment(
         metadata: {
             name: "redis-replica",
             namespace: guestbookNamespace.metadata.name,
+            labels: redisReplicaLabels,
         },
+
         spec: {
             replicas: 2,
+
             selector: {
                 matchLabels: redisReplicaLabels,
             },
+
             template: {
                 metadata: {
                     labels: redisReplicaLabels,
                 },
+
                 spec: {
                     containers: [
+                        // -----------------------------------------------------
+                        // Redis Replica
+                        // -----------------------------------------------------
                         {
                             name: "redis-replica",
                             image: "pulumi/guestbook-redis-replica",
+
                             ports: [
                                 {
                                     name: "redis",
                                     containerPort: 6379,
                                 },
                             ],
+
                             resources: {
                                 requests: {
                                     cpu: "100m",
                                     memory: "100Mi",
                                 },
+
                                 limits: {
                                     cpu: "250m",
                                     memory: "256Mi",
                                 },
                             },
+
                             readinessProbe: {
                                 tcpSocket: {
                                     port: "redis",
                                 },
+
                                 initialDelaySeconds: 5,
                                 periodSeconds: 5,
                             },
+
                             livenessProbe: {
                                 tcpSocket: {
                                     port: "redis",
                                 },
+
                                 initialDelaySeconds: 10,
                                 periodSeconds: 10,
+                            },
+                        },
+
+                        // -----------------------------------------------------
+                        // Prometheus Redis Exporter
+                        // -----------------------------------------------------
+                        {
+                            name: "redis-exporter",
+                            image: "oliver006/redis_exporter:v1.93.0",
+
+                            env: [
+                                {
+                                    name: "REDIS_ADDR",
+                                    value: "redis://localhost:6379",
+                                },
+                            ],
+
+                            ports: [
+                                {
+                                    name: "metrics",
+                                    containerPort: 9121,
+                                },
+                            ],
+
+                            resources: {
+                                requests: {
+                                    cpu: "25m",
+                                    memory: "32Mi",
+                                },
+
+                                limits: {
+                                    cpu: "100m",
+                                    memory: "64Mi",
+                                },
+                            },
+
+                            readinessProbe: {
+                                httpGet: {
+                                    path: "/metrics",
+                                    port: "metrics",
+                                },
+
+                                initialDelaySeconds: 5,
+                                periodSeconds: 10,
+                            },
+
+                            livenessProbe: {
+                                httpGet: {
+                                    path: "/metrics",
+                                    port: "metrics",
+                                },
+
+                                initialDelaySeconds: 10,
+                                periodSeconds: 15,
                             },
                         },
                     ],
@@ -193,6 +346,13 @@ export const redisReplicaDeployment = new k8s.apps.v1.Deployment(
     },
 );
 
+// -----------------------------------------------------------------------------
+// Redis Replica Service
+//
+// Port 6379 -> Redis
+// Port 9121 -> Prometheus metrics
+// -----------------------------------------------------------------------------
+
 export const redisReplicaService = new k8s.core.v1.Service(
     "redis-replica-service",
     {
@@ -201,13 +361,21 @@ export const redisReplicaService = new k8s.core.v1.Service(
             namespace: guestbookNamespace.metadata.name,
             labels: redisReplicaLabels,
         },
+
         spec: {
             selector: redisReplicaLabels,
+
             ports: [
                 {
                     name: "redis",
                     port: 6379,
                     targetPort: "redis",
+                },
+
+                {
+                    name: "metrics",
+                    port: 9121,
+                    targetPort: "metrics",
                 },
             ],
         },
@@ -229,50 +397,62 @@ export const frontendDeployment = new k8s.apps.v1.Deployment(
         metadata: {
             name: "frontend",
             namespace: guestbookNamespace.metadata.name,
+            labels: frontendLabels,
         },
+
         spec: {
             replicas: 3,
+
             selector: {
                 matchLabels: frontendLabels,
             },
+
             template: {
                 metadata: {
                     labels: frontendLabels,
                 },
+
                 spec: {
                     containers: [
                         {
                             name: "frontend",
                             image: "pulumi/guestbook-php-redis",
+
                             ports: [
                                 {
                                     name: "http",
                                     containerPort: 80,
                                 },
                             ],
+
                             resources: {
                                 requests: {
                                     cpu: "100m",
                                     memory: "100Mi",
                                 },
+
                                 limits: {
                                     cpu: "250m",
                                     memory: "256Mi",
                                 },
                             },
+
                             readinessProbe: {
                                 httpGet: {
                                     path: "/",
                                     port: "http",
                                 },
+
                                 initialDelaySeconds: 5,
                                 periodSeconds: 5,
                             },
+
                             livenessProbe: {
                                 httpGet: {
                                     path: "/",
                                     port: "http",
                                 },
+
                                 initialDelaySeconds: 10,
                                 periodSeconds: 10,
                             },
@@ -290,6 +470,14 @@ export const frontendDeployment = new k8s.apps.v1.Deployment(
     },
 );
 
+// -----------------------------------------------------------------------------
+// Frontend Service
+//
+// The Guestbook frontend itself does NOT expose native Prometheus metrics.
+// HTTP availability and latency will therefore be monitored later using
+// Prometheus Blackbox Exporter.
+// -----------------------------------------------------------------------------
+
 export const frontendService = new k8s.core.v1.Service(
     "frontend-service",
     {
@@ -298,9 +486,12 @@ export const frontendService = new k8s.core.v1.Service(
             namespace: guestbookNamespace.metadata.name,
             labels: frontendLabels,
         },
+
         spec: {
             type: "LoadBalancer",
+
             selector: frontendLabels,
+
             ports: [
                 {
                     name: "http",
@@ -313,10 +504,11 @@ export const frontendService = new k8s.core.v1.Service(
 );
 
 // -----------------------------------------------------------------------------
-// Values required later by monitoring.ts
+// Exports used by monitoring.ts and index.ts
 // -----------------------------------------------------------------------------
 
-export const namespaceName = guestbookNamespace.metadata.name;
+export const namespaceName =
+    guestbookNamespace.metadata.name;
 
 export const frontendServiceName =
     frontendService.metadata.name;

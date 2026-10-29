@@ -12,10 +12,14 @@ import {
     grafanaAdminUser,
     grafanaAdminPassword,
     prometheusReleaseName,
+    blackboxReleaseName,
+    redisUpQuery,
+    frontendProbeQuery,
+    frontendLatencyQuery,
 } from "./monitoring";
 
 // -----------------------------------------------------------------------------
-// Guestbook outputs
+// Guestbook Outputs
 // -----------------------------------------------------------------------------
 
 export const guestbookNamespace =
@@ -31,7 +35,7 @@ export const guestbookRedisReplicaService =
     redisReplicaServiceName;
 
 // -----------------------------------------------------------------------------
-// Monitoring outputs
+// Monitoring Outputs
 // -----------------------------------------------------------------------------
 
 export const monitoringNamespace =
@@ -39,6 +43,13 @@ export const monitoringNamespace =
 
 export const prometheusHelmRelease =
     prometheusReleaseName;
+
+export const blackboxHelmRelease =
+    blackboxReleaseName;
+
+// -----------------------------------------------------------------------------
+// Grafana Access
+// -----------------------------------------------------------------------------
 
 export const grafanaAccessUrl =
     grafanaUrl;
@@ -50,11 +61,24 @@ export const grafanaUsername =
     grafanaAdminUser;
 
 /**
- * Pulumi automatically treats this output as a secret.
+ * This output remains encrypted by Pulumi.
  *
- * To intentionally display it:
+ * Retrieve intentionally with:
  *
- *   pulumi stack output grafanaPassword --show-secrets
+ * pulumi stack output grafanaPassword --show-secrets
  */
 export const grafanaPassword =
     grafanaAdminPassword;
+
+// -----------------------------------------------------------------------------
+// Prometheus Verification Queries
+// -----------------------------------------------------------------------------
+
+export const redisMetricsQuery =
+    redisUpQuery;
+
+export const frontendAvailabilityQuery =
+    frontendProbeQuery;
+
+export const frontendLatencyMetricsQuery =
+    frontendLatencyQuery;
