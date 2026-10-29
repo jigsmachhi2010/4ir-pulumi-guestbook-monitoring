@@ -1,0 +1,6 @@
+name: 4ir-pulumi-guestbook-monitoring
+runtime:
+  name: nodejs
+  options:
+    typescript: true
+description: Kubernetes Guestbook application with Prometheus and Grafana monitoring deployed using Pulumi
